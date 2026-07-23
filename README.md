@@ -13,8 +13,7 @@
 
 # Table of contents
 - [Table of contents](#table-of-contents)
-- [cam\_usb\_h264\_streamer](#cam_usb_h264_streamer)
-  - [Requisitos](#requisitos)
+- [cam\_usb\_h264\_streamer.py](#cam_usb_h264_streamerpy)
   - [Instalacion](#instalacion)
   - [Ejecucion](#ejecucion)
   - [Verificar la recepcion del stream](#verificar-la-recepcion-del-stream)
@@ -27,13 +26,14 @@
   - [Solucion de problemas](#solucion-de-problemas)
 - [cam\_usb\_h264\_streamer code](#cam_usb_h264_streamer-code)
 - [requeriments.txt](#requerimentstxt)
+  - [Install requirements](#install-requirements)
   - [Referencias](#referencias)
 
 <br>
 
-Transmision de video por ethernet desde una camara usb por UDP
+Transmision de video por ethernet desde una Camara USB UVC que soporte H264 nativo en 1280x720 @ 30fps. Usando un PC con ubuntu 22.04.
 
-# cam_usb_h264_streamer
+# cam_usb_h264_streamer.py
 
 Aplicacion en Python que detecta automaticamente una camara USB con H264 nativo
 (UVC H264) y transmite el video en tiempo real por Ethernet usando RTP/UDP en el
@@ -43,12 +43,6 @@ sin configuracion manual adicional.
 
 No recodifica video: el H264 que entrega el hardware de la camara se remuxea
 directamente a RTP (`h264parse` + `rtph264pay`), por lo que el uso de CPU es bajo.
-
-## Requisitos
-
-- Ubuntu 22.04 o 24.04.
-- Camara USB UVC que soporte H264 nativo en 1280x720 @ 30fps.
-- Interfaz Ethernet con IP fija ya configurada a nivel de sistema operativo.
 
 ## Instalacion
 
@@ -1049,7 +1043,10 @@ if __name__ == "__main__":
 #
 # (si el venv ya existe sin esa opcion, hay que recrearlo).
 ```
-
+## Install requirements
+```bash
+pip install -r requirements.txt
+```
 
 ## Referencias
 
