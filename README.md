@@ -13,10 +13,10 @@
 
 # Table of contents
 - [Table of contents](#table-of-contents)
-- [cam\_usb\_h264\_streamer.py](#cam_usb_h264_streamerpy)
+- [cam\_usb\_h264\_streamer.py (Linux)](#cam_usb_h264_streamerpy-linux)
   - [Instalacion](#instalacion)
   - [Ejecucion](#ejecucion)
-  - [Verificar la recepcion del stream](#verificar-la-recepcion-del-stream)
+  - [Verificar la recepcion del stream (Windows / Linux)](#verificar-la-recepcion-del-stream-windows--linux)
     - [Con VLC (en cualquier equipo de la misma red)](#con-vlc-en-cualquier-equipo-de-la-misma-red)
     - [Opcion 1 (acceso directo)](#opcion-1-acceso-directo)
     - [Opcion 2](#opcion-2)
@@ -31,9 +31,9 @@
 
 <br>
 
-Transmision de video por ethernet desde una Camara USB UVC que soporte H264 nativo en 1280x720 @ 30fps. Usando un PC con ubuntu 22.04.
+Transmision de video por ethernet desde una Camara USB UVC que soporte H264 nativo en 1280x720 @ 30fps. Corriendo en ubuntu 22.04.
 
-# cam_usb_h264_streamer.py
+# cam_usb_h264_streamer.py (Linux)
 
 Aplicacion en Python que detecta automaticamente una camara USB con H264 nativo
 (UVC H264) y transmite el video en tiempo real por Ethernet usando RTP/UDP en el
@@ -92,7 +92,7 @@ Ejemplo de log esperado:
 2026-07-21 10:00:01 [INFO] usb_h264_streamer: Descriptor SDP generado dinamicamente desde el stream real: ...
 ```
 
-## Verificar la recepcion del stream
+## Verificar la recepcion del stream (Windows / Linux)
 
 ### Con VLC (en cualquier equipo de la misma red)
 
