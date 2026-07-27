@@ -8,9 +8,10 @@ compatible con QGroundControl y VLC (mismo estandar que BlueOS / mavlink-camera-
 @copyright: Copyright (c) 2026 www.carjavi.com
 @version: V1.0
 @library:
-- Sin dependencias pip. Requiere paquetes de sistema (Ubuntu 22.04/24.04):
-  sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-      gstreamer1.0-plugins-bad python3-gi gir1.2-gst-plugins-base-1.0 v4l-utils
+- Instalacion con un unico script (ver install.sh): instala los paquetes de
+  sistema (GStreamer, v4l-utils, headers) y PyGObject dentro del venv,
+  compilado especificamente para su interprete.
+    ./install.sh
 
 Decisiones tecnicas relevantes:
 - No se usa asyncio: GLib.MainLoop ya es el bucle de eventos nativo de GStreamer y
@@ -69,10 +70,8 @@ try:
 except (ImportError, ValueError) as import_error:
     sys.stderr.write(
         "Error: no se encontraron los bindings de GStreamer (PyGObject/Gst).\n"
-        "Instale las dependencias del sistema con:\n"
-        "  sudo apt install python3-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-tools \\\n"
-        "      gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad "
-        "v4l-utils\n"
+        "Instale las dependencias con:\n"
+        "  ./install.sh\n"
         f"Detalle: {import_error}\n"
     )
     sys.exit(1)

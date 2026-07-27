@@ -13,25 +13,39 @@
 
 # Table of contents
 - [Table of contents](#table-of-contents)
+- [Camera](#camera)
+    - [Features:](#features)
 - [cam\_usb\_h264\_streamer.py (Linux)](#cam_usb_h264_streamerpy-linux)
-  - [Instalacion](#instalacion)
+  - [Install](#install)
   - [Ejecucion](#ejecucion)
   - [Verificar la recepcion del stream (Windows / Linux)](#verificar-la-recepcion-del-stream-windows--linux)
     - [Con VLC (en cualquier equipo de la misma red)](#con-vlc-en-cualquier-equipo-de-la-misma-red)
-    - [Opcion 1 (acceso directo)](#opcion-1-acceso-directo)
+    - [Opcion 1 (acceso directo VLC)](#opcion-1-acceso-directo-vlc)
     - [Opcion 2](#opcion-2)
+    - [Corre el VLC desde terminal](#corre-el-vlc-desde-terminal)
+- [busca el ejecutable del VLC](#busca-el-ejecutable-del-vlc)
+    - [Evitar delay en el streamer del video de VLC](#evitar-delay-en-el-streamer-del-video-de-vlc)
+    - [Opcion 3](#opcion-3)
     - [Con QGroundControl](#con-qgroundcontrol)
     - [Con GStreamer, en otro equipo Linux](#con-gstreamer-en-otro-equipo-linux)
   - [Decisiones tecnicas relevantes](#decisiones-tecnicas-relevantes)
   - [Solucion de problemas](#solucion-de-problemas)
 - [cam\_usb\_h264\_streamer code](#cam_usb_h264_streamer-code)
-- [requeriments.txt](#requerimentstxt)
-  - [Install requirements](#install-requirements)
   - [Referencias](#referencias)
 
 <br>
 
 Transmision de video por ethernet desde una Camara USB UVC que soporte H264 nativo en 1280x720 @ 30fps. Corriendo en ubuntu 22.04.
+
+# Camera
+Low light camera
+
+<p align="center"><img src="./img/cam.jpg" width="300"   alt=" " /></p>
+
+### Features:
+https://www.webcamerausb.com/elp-usb-camera-factory-suppy-2mp-camera-module-with-sony-imx323-cmos-sensor-h264-pc-webcam-1080p-30fps-for-video-conference-low-illumination-usb-camera-1080p-with-28mm-lens-for-windows-linux-android-and-mac-p-97.html
+
+<br>
 
 # cam_usb_h264_streamer.py (Linux)
 
@@ -44,29 +58,34 @@ sin configuracion manual adicional.
 No recodifica video: el H264 que entrega el hardware de la camara se remuxea
 directamente a RTP (`h264parse` + `rtph264pay`), por lo que el uso de CPU es bajo.
 
-## Instalacion
+## Install
 
 ```bash
-sudo apt update
-sudo apt install -y \
-    gstreamer1.0-tools \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
-    python3-gi \
-    gir1.2-gst-plugins-base-1.0 \
-    v4l-utils
+chmod +x install.sh
+./install.sh
 ```
 
-No hay paquetes pip que instalar (ver `requirements.txt`).
+`install.sh` crea el venv (`./venv`) sin `--system-site-packages` e instala
+`PyGObject` compilado especificamente para ese interprete, evitando el error
+`cannot import name '_gi' from partially initialized module 'gi'` que ocurre
+al depender del `python3-gi` del sistema si la version de Python del venv no
+coincide exactamente con la del sistema. Si ya existe un venv creado con
+`--system-site-packages`, el script lo detecta y lo recrea automaticamente.
+
+Al terminar, active el venv antes de correr la app:
+
+```bash
+source venv/bin/activate
+```
 
 Si su usuario no pertenece al grupo `video`, agreguelo para poder abrir `/dev/video*`
 sin privilegios de superusuario:
 
 ```bash
 sudo usermod -aG video "$USER"
-# cierre sesion y vuelva a iniciarla para que el cambio de grupo tome efecto
 ```
+<br>
+
 
 ## Ejecucion
 
@@ -95,23 +114,37 @@ Ejemplo de log esperado:
 ## Verificar la recepcion del stream (Windows / Linux)
 
 ### Con VLC (en cualquier equipo de la misma red)
-
-### Opcion 1 (acceso directo)
-Se crea un archivo con el siguiente texto con la siguiente extension ```file-name.sdp```
+### Opcion 1 (acceso directo VLC)
+Se crea un archivo con el siguiente texto con la siguiente extension ```cam_viewer.sdp```
 ```Bash
 c=IN IP4 192.168.2.1
 m=video 5600 RTP/AVP 96
 a=rtpmap:96 H264/90000
 ```
-
+<br>
 
 ### Opcion 2
-`Medios > Abrir volcado de red...` y usar:
-
+### Corre el VLC desde terminal
+```Bash
+(echo v=0&echo o=- 0 0 IN IP4 192.168.1.10&echo s=stream&echo c=IN IP4 192.168.2.1&echo t=0 0&echo m=video 5600 RTP/AVP 96&echo a=rtpmap:96 H264/90000) > "%TEMP%\stream.sdp" && "C:\Program Files\VideoLAN\VLC\vlc.exe" --network-caching=0 "%TEMP%\stream.sdp"
 ```
-udp://@:5600
+
+> :memo: **Note:** VLC graba en /videos
+
+> :memo: **Note:** En caso de error verificar la ruta del VLC
+# busca el ejecutable del VLC
+```Bash
+cd "$(dirname "$(find /c/ -name "vlc.exe" -print -quit 2>/dev/null)")"
 ```
 
+### Evitar delay en el streamer del video de VLC
+<p align="center"><img src="./img/vlc_0.png" width="600"   alt=" " /></p>
+<p align="center"><img src="./img/vlc_1.png" width="600"   alt=" " /></p>
+<p align="center"><img src="./img/vlc_2.png" width="600"   alt=" " /></p>
+
+<br>
+
+### Opcion 3
 ### Con QGroundControl
 
 `Application Settings > General > Video` y configurar:
@@ -172,6 +205,95 @@ gst-launch-1.0 udpsrc port=5600 ! application/x-rtp,payload=96 ! rtph264depay ! 
   misma subred que la interfaz Ethernet activa detectada (mismo dominio de
   broadcast), y que ningun firewall bloquea UDP/5600.
 
+<br>
+
+***install.sh***
+```bash
+#!/usr/bin/env bash
+# cam_usb_h264_streamer - instalador unico
+# @author: Carlos Briceno <carjavi@hotmail.com>
+# @version: V1.0
+#
+# Instala TODO lo necesario para correr cam_usb_h264_streamer.py: paquetes de
+# sistema (GStreamer, v4l-utils, headers de compilacion) y PyGObject dentro
+# de un venv, compilado especificamente para el interprete de ese venv (evita
+# el error "cannot import name '_gi' from partially initialized module 'gi'"
+# que ocurre al depender del PyGObject del sistema con --system-site-packages).
+#
+# Uso:
+#   chmod +x install.sh
+#   ./install.sh
+
+set -euo pipefail
+
+VENV_DIR="venv"
+PYGOBJECT_SPEC="PyGObject>=3.42,<4"
+
+echo "== 1/3: paquetes de sistema =="
+
+# "|| true": en algunas instalaciones de Ubuntu, el hook de post-actualizacion
+# de "command-not-found" (cnf-update-db) falla por un problema propio del
+# sistema (python3-apt) sin relacion con este proyecto; apt-get update ya
+# actualizo la lista de paquetes correctamente antes de llegar a ese hook, asi
+# que no debe abortar el resto de la instalacion.
+sudo apt-get update || true
+
+# Se instalan en grupos separados a proposito: "apt-get install" es atomico
+# -si UN SOLO nombre de paquete no existe en esta version de Ubuntu, no
+# instala NINGUNO de la lista, ni siquiera los que si existen. Separando por
+# grupo, un nombre de paquete GStreamer que cambie entre versiones de Ubuntu
+# no bloquea la instalacion de las herramientas de compilacion que pip
+# necesita para PyGObject.
+
+sudo apt-get install -y \
+    pkg-config \
+    python3-dev \
+    python3-venv \
+    libcairo2-dev
+
+sudo apt-get install -y \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gir1.2-gst-plugins-base-1.0 \
+    v4l-utils
+
+# El paquete de cabeceras de GObject-Introspection requerido para compilar
+# PyGObject via pip cambio de nombre entre versiones de Ubuntu
+# (girepository-1.0 -> girepository-2.0, desde Ubuntu 24.04+). Se intenta el
+# nombre nuevo primero y se cae al anterior si no existe en esta version.
+sudo apt-get install -y libgirepository-2.0-dev \
+    || sudo apt-get install -y libgirepository1.0-dev
+
+echo ""
+echo "== 2/3: entorno virtual (venv) =="
+
+if [ -f "$VENV_DIR/pyvenv.cfg" ] && grep -q "include-system-site-packages = true" "$VENV_DIR/pyvenv.cfg"; then
+    echo "El venv existente en '$VENV_DIR' tiene --system-site-packages activo."
+    echo "Con esa bandera, pip ve el PyGObject del sistema como 'ya satisfecho'"
+    echo "y no instala la copia compilada para este venv (causa del error _gi)."
+    echo "Se recreara sin esa bandera."
+    rm -rf "$VENV_DIR"
+fi
+
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+
+echo ""
+echo "== 3/3: PyGObject (compilado especificamente para este venv) =="
+
+"$VENV_DIR/bin/pip" install --upgrade pip
+"$VENV_DIR/bin/pip" install "$PYGOBJECT_SPEC"
+
+echo ""
+echo "Listo. Para correr la app:"
+echo "  source $VENV_DIR/bin/activate"
+echo "  python cam_usb_h264_streamer.py"
+```
+
+<br>
 
 # cam_usb_h264_streamer code
 
@@ -186,9 +308,10 @@ compatible con QGroundControl y VLC (mismo estandar que BlueOS / mavlink-camera-
 @copyright: Copyright (c) 2026 www.carjavi.com
 @version: V1.0
 @library:
-- Sin dependencias pip. Requiere paquetes de sistema (Ubuntu 22.04/24.04):
-  sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-      gstreamer1.0-plugins-bad python3-gi gir1.2-gst-plugins-base-1.0 v4l-utils
+- Instalacion con un unico script (ver install.sh): instala los paquetes de
+  sistema (GStreamer, v4l-utils, headers) y PyGObject dentro del venv,
+  compilado especificamente para su interprete.
+    ./install.sh
 
 Decisiones tecnicas relevantes:
 - No se usa asyncio: GLib.MainLoop ya es el bucle de eventos nativo de GStreamer y
@@ -247,10 +370,8 @@ try:
 except (ImportError, ValueError) as import_error:
     sys.stderr.write(
         "Error: no se encontraron los bindings de GStreamer (PyGObject/Gst).\n"
-        "Instale las dependencias del sistema con:\n"
-        "  sudo apt install python3-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-tools \\\n"
-        "      gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad "
-        "v4l-utils\n"
+        "Instale las dependencias con:\n"
+        "  ./install.sh\n"
         f"Detalle: {import_error}\n"
     )
     sys.exit(1)
@@ -1007,46 +1128,9 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
+
 ```
 
-# requeriments.txt
-```bash
-# usb_h264_streamer - dependencias
-# @author: Carlos Briceno <carjavi@hotmail.com>
-# @date: 21-07-2026
-# @version: V1.0
-#
-# Este proyecto NO tiene dependencias instalables via pip.
-# Usa unicamente la biblioteca estandar de Python (socket, fcntl, subprocess,
-# ipaddress, dataclasses, logging, signal, etc.) mas los bindings de sistema
-# gi/Gst (PyGObject), que se instalan a nivel de sistema operativo, no via pip,
-# para garantizar que coincidan con la version de GStreamer instalada.
-#
-# Instalacion de dependencias de sistema (Ubuntu 22.04/24.04):
-#
-#   sudo apt update
-#   sudo apt install -y \
-#       gstreamer1.0-tools \
-#       gstreamer1.0-plugins-base \
-#       gstreamer1.0-plugins-good \
-#       gstreamer1.0-plugins-bad \
-#       python3-gi \
-#       gir1.2-gst-plugins-base-1.0 \
-#       v4l-utils
-#
-# IMPORTANTE si se ejecuta dentro de un entorno virtual (venv):
-# python3-gi se instala en el Python del sistema, no dentro del venv. Si el
-# venv se crea sin acceso a los paquetes del sistema, "import gi" fallara aunque
-# los paquetes apt de arriba esten instalados. Crear el venv con:
-#
-#   python3 -m venv --system-site-packages venv
-#
-# (si el venv ya existe sin esa opcion, hay que recrearlo).
-```
-## Install requirements
-```bash
-pip install -r requirements.txt
-```
 
 ## Referencias
 
