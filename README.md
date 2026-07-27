@@ -22,7 +22,7 @@
     - [Con VLC (en cualquier equipo de la misma red)](#con-vlc-en-cualquier-equipo-de-la-misma-red)
     - [Opcion 1 (acceso directo VLC)](#opcion-1-acceso-directo-vlc)
     - [Opcion 2](#opcion-2)
-    - [Corre el VLC desde terminal](#corre-el-vlc-desde-terminal)
+    - [Corre el VLC desde terminal (ya configurado la red y el puerto)](#corre-el-vlc-desde-terminal-ya-configurado-la-red-y-el-puerto)
 - [busca el ejecutable del VLC](#busca-el-ejecutable-del-vlc)
     - [Evitar delay en el streamer del video de VLC](#evitar-delay-en-el-streamer-del-video-de-vlc)
     - [Opcion 3](#opcion-3)
@@ -112,6 +112,7 @@ Ejemplo de log esperado:
 ```
 
 ## Verificar la recepcion del stream (Windows / Linux)
+Los 2 PC deben estar en la misma Red
 
 ### Con VLC (en cualquier equipo de la misma red)
 ### Opcion 1 (acceso directo VLC)
@@ -121,15 +122,14 @@ c=IN IP4 192.168.2.1
 m=video 5600 RTP/AVP 96
 a=rtpmap:96 H264/90000
 ```
-<br>
 
 ### Opcion 2
-### Corre el VLC desde terminal
+### Corre el VLC desde terminal (ya configurado la red y el puerto)
 ```Bash
 (echo v=0&echo o=- 0 0 IN IP4 192.168.1.10&echo s=stream&echo c=IN IP4 192.168.2.1&echo t=0 0&echo m=video 5600 RTP/AVP 96&echo a=rtpmap:96 H264/90000) > "%TEMP%\stream.sdp" && "C:\Program Files\VideoLAN\VLC\vlc.exe" --network-caching=0 "%TEMP%\stream.sdp"
 ```
 
-> :memo: **Note:** VLC graba en /videos
+> :memo: **Note:** VLC graba en /videos si usas Windows para grabar el video
 
 > :memo: **Note:** En caso de error verificar la ruta del VLC
 # busca el ejecutable del VLC
