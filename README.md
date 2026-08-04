@@ -17,21 +17,26 @@
     - [Features:](#features)
 - [cam\_usb\_h264\_streamer.py (Linux)](#cam_usb_h264_streamerpy-linux)
   - [Install](#install)
-  - [Ejecucion](#ejecucion)
-  - [Verificar la recepcion del stream (Windows / Linux)](#verificar-la-recepcion-del-stream-windows--linux)
-    - [Con VLC (en cualquier equipo de la misma red)](#con-vlc-en-cualquier-equipo-de-la-misma-red)
-    - [Opcion 1 (acceso directo VLC)](#opcion-1-acceso-directo-vlc)
-    - [Opcion 2](#opcion-2)
-    - [Corre el VLC desde terminal (ya configurado la red y el puerto)](#corre-el-vlc-desde-terminal-ya-configurado-la-red-y-el-puerto)
-- [busca el ejecutable del VLC](#busca-el-ejecutable-del-vlc)
-    - [Evitar delay en el streamer del video de VLC](#evitar-delay-en-el-streamer-del-video-de-vlc)
+- [Métodos de Transmisión (state of the art)](#métodos-de-transmisión-state-of-the-art)
+- [Use](#use)
+  - [Emisor](#emisor)
+  - [Receptor](#receptor)
+  - [Verificar la recepcion del streaming Unicast/Broadcast (Windows / Linux)](#verificar-la-recepcion-del-streaming-unicastbroadcast-windows--linux)
+    - [Con VLC](#con-vlc)
+    - [Opcion 1 Achivo \*.sdp](#opcion-1-achivo-sdp)
+    - [Opcion 2 (acceso directo VLC)](#opcion-2-acceso-directo-vlc)
     - [Opcion 3](#opcion-3)
+    - [Corre el VLC desde terminal (ya configurado la red y el puerto)](#corre-el-vlc-desde-terminal-ya-configurado-la-red-y-el-puerto)
+  - [Busca el ejecutable del VLC](#busca-el-ejecutable-del-vlc)
+  - [Evitar delay en el streamer del video de VLC](#evitar-delay-en-el-streamer-del-video-de-vlc)
+    - [Opcion 4](#opcion-4)
     - [Con QGroundControl](#con-qgroundcontrol)
     - [Con GStreamer, en otro equipo Linux](#con-gstreamer-en-otro-equipo-linux)
   - [Decisiones tecnicas relevantes](#decisiones-tecnicas-relevantes)
   - [Solucion de problemas](#solucion-de-problemas)
 - [cam\_usb\_h264\_streamer code](#cam_usb_h264_streamer-code)
-- [cam\_usb\_h264\_streamer\_RPi code](#cam_usb_h264_streamer_rpi-code)
+- [cam\_usb\_h264\_streamer\_unicast\_RPi\_ubunt.py](#cam_usb_h264_streamer_unicast_rpi_ubuntpy)
+- [cam\_usb\_h264\_streamer\_broadcast.py](#cam_usb_h264_streamer_broadcastpy)
   - [Referencias](#referencias)
 
 <br>
@@ -87,52 +92,67 @@ sudo usermod -aG video "$USER"
 ```
 <br>
 
+# Métodos de Transmisión (state of the art)
 
-## Ejecucion
-Windows
+<p align="center"><img src="./img/red.png" width="400"   alt=" " /></p>
+
+```Unicast```: Envía datos desde un emisor hacia un único receptor. Utiliza una dirección MAC/IP de destino específica. ***Es el método más eficiente*** y común para el tráfico diario (como navegar por la web o transferir archivos). 
+
+> :bulb: **Tip:** Es la mejor opcion para usar ```fathom-x tether interface (Modulo L200V20)```
+
+```Broadcast```: Envía datos desde un emisor hacia todos los dispositivos de la red local.Utiliza una dirección MAC especial compuesta solo por letras F (FF:FF:FF:FF:FF:FF). Se usa para tareas de descubrimiento inicial, como el protocolo ARP. 
+
+> :warning: **Warning:** En Broadcast si se usa el ```fathom-x tether interface (Modulo L200V20)``` NO funciona el video, hay perdida de paquetes, y VLC requiere una cantidad minima para poder mostrar un video. 
+
+<br>
+
+# Use
+## Emisor
+Ubuntu / Raspberry Pi4.  <br>
+
+```Unicast:```
 ```bash
-python3 cam_usb_h264_streamer.py
+python cam_usb_h264_streamer_unicast_RPi_ubunt.py <ip: cliente> 
+# sample:
+python cam_usb_h264_streamer_unicast.py 192.168.1.200
 ```
 
-Raspberry Pi4
+```Broadcast:```
 ```bash
-python3 cam_usb_h264_streamer_RPi.py
+python cam_usb_h264_streamer_broadcast.py # sin argumento
+```
+<br>
+
+## Receptor
+## Verificar la recepcion del streaming Unicast/Broadcast (Windows / Linux)
+> :memo: **Note:** Los 2 PC deben estar en la misma Red
+
+### Con VLC 
+### Opcion 1 Achivo *.sdp
+Visor de video Unicast/Broadcast
+
+```bash
+cam_viewer_Unicast_Broadcast.sdp
 ```
 
-> [!IMPORTANT]
-> ```cam_usb_h264_streamer.py``` como ```cam_usb_h264_streamer_RPi.py``` funcionan en UDP Ethernet
-
-- No requiere argumentos ni seleccion manual: detecta la camara y la IP
-  automaticamente.
-- Detiene la aplicacion de forma limpia con `Ctrl+C` (libera el pipeline de
-  GStreamer y el dispositivo de camara).
-- Si la camara se desconecta o el pipeline falla, la aplicacion reintenta la
-  deteccion y el streaming automaticamente cada pocos segundos, sin reiniciar
-  el script.
-
-Ejemplo de log esperado:
-
-```
-2026-07-21 10:00:01 [INFO] usb_h264_streamer: Iniciando usb_h264_streamer V1.0
-2026-07-21 10:00:01 [INFO] usb_h264_streamer: Camara detectada: /dev/video0
-2026-07-21 10:00:01 [INFO] usb_h264_streamer: Interfaz Ethernet activa: eth0 (ip=192.168.2.2, broadcast=192.168.2.255)
-2026-07-21 10:00:01 [INFO] usb_h264_streamer: Streaming iniciado: dispositivo=/dev/video0 destino=udp://192.168.2.255:5600 (broadcast, pt=96)
-2026-07-21 10:00:01 [INFO] usb_h264_streamer: Descriptor SDP generado dinamicamente desde el stream real: ...
-```
-
-## Verificar la recepcion del stream (Windows / Linux)
-Los 2 PC deben estar en la misma Red
-
-### Con VLC (en cualquier equipo de la misma red)
-### Opcion 1 (acceso directo VLC)
-Se crea un archivo con el siguiente texto con la siguiente extension ```cam_viewer.sdp```
+### Opcion 2 (acceso directo VLC)
+Se crea un archivo con el siguiente texto con la siguiente extension ```cam_viewer_Unicast_Broadcast.sdp```
 ```Bash
-c=IN IP4 192.168.2.1
+v=0
+o=- 0 0 IN IP4 0.0.0.0
+s=cam_viewer
+c=IN IP4 0.0.0.0
+t=0 0
+a=tool:usb_h264_streamer
+a=type:broadcast
+a=recvonly
 m=video 5600 RTP/AVP 96
 a=rtpmap:96 H264/90000
+a=framerate:30
+a=fmtp:96 packetization-mode=1;sprop-parameter-sets=Z01AH5ZUAoAtyA==,aO44gA==;profile-level-id=4d401f;level-asymmetry-allowed=1
 ```
 
-### Opcion 2
+### Opcion 3
 ### Corre el VLC desde terminal (ya configurado la red y el puerto)
 ```Bash
 (echo v=0&echo o=- 0 0 IN IP4 192.168.1.10&echo s=stream&echo c=IN IP4 192.168.2.1&echo t=0 0&echo m=video 5600 RTP/AVP 96&echo a=rtpmap:96 H264/90000) > "%TEMP%\stream.sdp" && "C:\Program Files\VideoLAN\VLC\vlc.exe" --network-caching=0 "%TEMP%\stream.sdp"
@@ -141,19 +161,24 @@ a=rtpmap:96 H264/90000
 > :memo: **Note:** VLC graba en /videos si usas Windows para grabar el video
 
 > :memo: **Note:** En caso de error verificar la ruta del VLC
-# busca el ejecutable del VLC
+
+<br>
+
+## Busca el ejecutable del VLC
 ```Bash
 cd "$(dirname "$(find /c/ -name "vlc.exe" -print -quit 2>/dev/null)")"
 ```
 
-### Evitar delay en el streamer del video de VLC
+<br>
+
+## Evitar delay en el streamer del video de VLC
 <p align="center"><img src="./img/vlc_0.png" width="600"   alt=" " /></p>
 <p align="center"><img src="./img/vlc_1.png" width="600"   alt=" " /></p>
 <p align="center"><img src="./img/vlc_2.png" width="600"   alt=" " /></p>
 
 <br>
 
-### Opcion 3
+### Opcion 4
 ### Con QGroundControl
 
 `Application Settings > General > Video` y configurar:
@@ -213,6 +238,29 @@ gst-launch-1.0 udpsrc port=5600 ! application/x-rtp,payload=96 ! rtph264depay ! 
 - **No aparece video en VLC/QGC**: confirme que el equipo receptor esta en la
   misma subred que la interfaz Ethernet activa detectada (mismo dominio de
   broadcast), y que ningun firewall bloquea UDP/5600.
+
+<br>
+
+> [!IMPORTANT]
+> ```cam_usb_h264_streamer.py``` como ```cam_usb_h264_streamer_RPi.py``` funcionan en UDP Ethernet
+
+- No requiere argumentos ni seleccion manual: detecta la camara y la IP
+  automaticamente.
+- Detiene la aplicacion de forma limpia con `Ctrl+C` (libera el pipeline de
+  GStreamer y el dispositivo de camara).
+- Si la camara se desconecta o el pipeline falla, la aplicacion reintenta la
+  deteccion y el streaming automaticamente cada pocos segundos, sin reiniciar
+  el script.
+
+Ejemplo de log esperado:
+
+```
+2026-07-21 10:00:01 [INFO] usb_h264_streamer: Iniciando usb_h264_streamer V1.0
+2026-07-21 10:00:01 [INFO] usb_h264_streamer: Camara detectada: /dev/video0
+2026-07-21 10:00:01 [INFO] usb_h264_streamer: Interfaz Ethernet activa: eth0 (ip=192.168.2.2, broadcast=192.168.2.255)
+2026-07-21 10:00:01 [INFO] usb_h264_streamer: Streaming iniciado: dispositivo=/dev/video0 destino=udp://192.168.2.255:5600 (broadcast, pt=96)
+2026-07-21 10:00:01 [INFO] usb_h264_streamer: Descriptor SDP generado dinamicamente desde el stream real: ...
+```
 
 <br>
 
@@ -1140,10 +1188,13 @@ if __name__ == "__main__":
 
 ```
 
+
+
+
 <br>
 
 
-# cam_usb_h264_streamer_RPi code
+# cam_usb_h264_streamer_unicast_RPi_ubunt.py 
 
 ```Python
 #!/usr/bin/env python3
@@ -1151,10 +1202,8 @@ if __name__ == "__main__":
 Streaming en tiempo real de una camara USB con H264 nativo hacia la red via RTP/UDP,
 compatible con QGroundControl y VLC (mismo estandar que BlueOS / mavlink-camera-manager).
 
-Version adaptada para Raspberry Pi 4 (ver seccion "Cambios para Raspberry Pi 4" abajo).
-
 @author: Carlos Briceno <carjavi@hotmail.com>
-@date: 27-07-2026
+@date: 21-07-2026
 @copyright: Copyright (c) 2026 www.carjavi.com
 @version: V1.1
 @library:
@@ -1162,6 +1211,9 @@ Version adaptada para Raspberry Pi 4 (ver seccion "Cambios para Raspberry Pi 4" 
   sistema (GStreamer, v4l-utils, headers) y PyGObject dentro del venv,
   compilado especificamente para su interprete.
     ./install.sh
+
+Uso:
+    ./cam_usb_h264_streamer_unicast.py <ip_cliente_1> [ip_cliente_2 ...]
 
 Decisiones tecnicas relevantes:
 - No se usa asyncio: GLib.MainLoop ya es el bucle de eventos nativo de GStreamer y
@@ -1171,56 +1223,27 @@ Decisiones tecnicas relevantes:
 - Logging con formato timestamp/nivel/modulo en texto plano (no JSON): este script se
   ejecuta manualmente en una terminal y debe ser legible en tiempo real por el
   operador; no hay un agregador de logs en este modo de despliegue.
-- Destino UDP = direccion de broadcast del subnet de la interfaz de red activa
-  (IP | ~netmask), NO la IP unicast propia. Enviar paquetes a la propia IP unicast
-  los entregaria por loopback y jamas saldrian al cable/aire, incumpliendo el
-  requisito de que "cualquier cliente en la misma red" (VLC/QGC en otro equipo)
-  reciba el stream sin configuracion adicional. La IP propia se sigue usando en el
-  campo c= del SDP informativo, tal como en el descriptor de referencia.
+- Destino UDP = UNICAST a los clientes indicados por argumento (via multiudpsink,
+  igual que mavlink-camera-manager/BlueOS en src/lib/stream/sink/udp_sink.rs:
+  "multiudpsink sync=false clients=ip:puerto,..."), NO la direccion de broadcast del
+  subnet. Se cambio de broadcast a unicast tras confirmar con ffprobe (conteo de
+  gaps en el numero de secuencia RTP) que, a traves de un enlace HomePlug AV/PLC
+  (LX200V20/Fathom), el trafico broadcast no tiene reintento/ACK a nivel de capa MAC
+  (igual que en WiFi: solo el trafico unicast se retransmite ante error del medio),
+  lo que produce perdida de paquetes real y medible (~9 gaps/seg) que el broadcast
+  nunca recupera. Con el mismo enlace y la misma camara, unicast midio 0 gaps en la
+  misma ventana de prueba. La IP propia se sigue usando en el campo c= del SDP
+  informativo, tal como en el descriptor de referencia.
 - La deteccion de camara usa el binario v4l2-ctl (paquete v4l-utils) via subprocess,
   NO gst-launch-1.0: el requisito de evitar subprocess aplica al pipeline de streaming
   (para tener control programatico de errores/reconexion via el bus de GStreamer), no a
   la fase de enumeracion/verificacion de formatos soportados por el hardware, donde
   v4l2-ctl es la herramienta estandar y ya es una dependencia de sistema documentada.
-
-Cambios para Raspberry Pi 4 (V1.1, respecto de cam_usb_h264_streamer.py V1.0):
-- Diagnostico (ver usb_h264_streamer.log de la RPi4): la camara se detectaba
-  correctamente (/dev/video2) en cada arranque, pero la aplicacion quedaba en un
-  bucle infinito de "No se detecto ninguna interfaz Ethernet activa con IPv4
-  asignada" durante mas de 1.5 horas continuas, sin excepcion ni error real: por
-  eso se percibia como "colgada" (no imprime nada en consola mientras espera).
-- Fix 1 (causa raiz mas probable): NetworkDetector exigia operstate=="up" en la
-  interfaz. El driver bcmgenet del Ethernet integrado de la RPi4 (y varios drivers
-  de placas embebidas en general) puede dejar 'operstate' en "unknown" de forma
-  indefinida aunque el enlace este activo y ya tenga IP asignada por DHCP, a
-  diferencia del NIC de escritorio/servidor de la PC Ubuntu de referencia. Ahora se
-  acepta operstate en {"up", "unknown"} (ver ACCEPTED_OPERSTATES); la condicion real
-  de "interfaz utilizable" la sigue imponiendo la verificacion de que tenga una
-  IPv4 realmente asignada, asi que esto no relaja el filtro de interfaces caidas.
-- Fix 2: se agrega WiFi como respaldo automatico si no hay Ethernet cableada activa
-  (NetworkDetector.list_wifi_interfaces() / find_active_network()). El mecanismo de
-  envio (broadcast UDP calculado como ip | ~netmask) es identico sobre WiFi; muchos
-  despliegues de Raspberry Pi (a diferencia de la PC de escritorio de referencia)
-  solo cuentan con conectividad WiFi, y el script original la excluia por diseno.
-- Fix 3: se agrega logging de depuracion detallado por interfaz (nombre, type,
-  operstate, motivo de descarte) para que un problema similar en el futuro sea
-  diagnosticable directamente desde el log, sin tener que adivinar.
-- Fix 4 (UX): se imprime una linea de estado en consola ("buscando camara...",
-  "buscando red...") cada CONSOLE_STATUS_THROTTLE reintentos mientras se espera
-  camara o red. En la version original no se imprime nada en consola hasta que el
-  pipeline confirma PLAYING, lo que en una espera prolongada (como la observada en
-  la RPi4) es indistinguible de una aplicacion realmente colgada.
-
-Nota: estos cambios no se pudieron validar en hardware Raspberry Pi 4 real (no
-disponible en este entorno); se basan en el analisis del log adjunto y en
-comportamiento documentado de drivers de red embebidos. Verificar en la RPi4 antes
-de dar el fix por cerrado.
 """
 
 from __future__ import annotations
 
 import glob
-import ipaddress
 import logging
 import os
 import re
@@ -1248,8 +1271,7 @@ try:
     import gi
 
     gi.require_version("Gst", "1.0")
-    gi.require_version("Gio", "2.0")
-    from gi.repository import Gst, GLib, Gio
+    from gi.repository import Gst, GLib
 except (ImportError, ValueError) as import_error:
     sys.stderr.write(
         "Error: no se encontraron los bindings de GStreamer (PyGObject/Gst).\n"
@@ -1310,22 +1332,8 @@ SDP_OUTPUT_PATH = "stream_reference.sdp"
 SIOCGIFADDR = 0x8915
 """Codigo ioctl de Linux para obtener la direccion IPv4 de una interfaz de red."""
 
-SIOCGIFNETMASK = 0x891B
-"""Codigo ioctl de Linux para obtener la mascara de subred IPv4 de una interfaz de red."""
-
 EXCLUDED_INTERFACE_PREFIXES = ("lo", "docker", "veth", "br-", "virbr", "tun", "tap")
-"""Prefijos de interfaces virtuales/loopback a excluir al buscar la interfaz cableada activa."""
-
-ACCEPTED_OPERSTATES = ("up", "unknown")
-"""Valores de 'operstate' aceptados como interfaz activa.
-
-En Raspberry Pi 4 (driver bcmgenet del controlador Ethernet integrado) se observo
-en campo que 'operstate' puede quedar en 'unknown' de forma indefinida aun con el
-cable conectado y una IP ya asignada por DHCP, a diferencia de los drivers de NIC
-de escritorio/servidor (usados en la PC Ubuntu de referencia) que si transicionan
-correctamente a 'up'. Esto NO relaja el filtro de interfaces administrativamente
-apagadas ('down'): la condicion real de "interfaz utilizable" la sigue imponiendo
-la verificacion posterior de que la interfaz tiene una IPv4 asignada."""
+"""Prefijos de interfaces virtuales/loopback a excluir al buscar la interfaz Ethernet activa."""
 
 LOG_FILE_PATH = "usb_h264_streamer.log"
 """Archivo donde se registra el detalle tecnico (misma logica que BlueOS/mavlink-camera-manager,
@@ -1337,18 +1345,699 @@ STATUS_RUNNING = "running!"
 STATUS_CANCELLED = "cancelado"
 """Texto de estado mostrado en consola al cerrar la aplicacion (Ctrl+C/SIGTERM)."""
 
-STATUS_WAITING_CAMERA = "buscando camara USB..."
-"""Texto de estado mostrado en consola mientras se espera detectar una camara compatible."""
+logger = logging.getLogger(APP_NAME)
 
-STATUS_WAITING_NETWORK = "buscando red..."
-"""Texto de estado mostrado en consola mientras se espera detectar una interfaz de red activa."""
 
-CONSOLE_STATUS_THROTTLE = 15
-"""Cada cuantos reintentos se repite en consola la linea de estado de espera
-(camara/red), para que el operador no confunda una espera prolongada -mas comun en
-Raspberry Pi, donde la red puede tardar mas en quedar disponible que en un PC de
-escritorio- con una aplicacion colgada. El detalle completo de cada reintento
-siempre queda en LOG_FILE_PATH, sin importar este throttle."""
+def configure_logging() -> None:
+    """Configura el logging raiz con salida a archivo en formato timestamp/nivel/modulo."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        filename=LOG_FILE_PATH,
+    )
+
+
+def print_status(status: str) -> None:
+    """Imprime en consola la unica linea de estado visible para el operador."""
+    print(f"status: {status}", flush=True)
+
+
+def print_video_target(clients: list[str], port: int) -> None:
+    """Imprime la linea de destino del stream, justo antes de la linea de estado."""
+    destinos = ", ".join(f"udp://{ip}:{port}" for ip in clients)
+    print(f"video to {destinos}", flush=True)
+
+
+# ---------------------------------------------------------------------------
+# Deteccion de camara USB (V4L2)
+# ---------------------------------------------------------------------------
+
+
+class CameraDetector:
+    """Detecta automaticamente la primera camara USB que entrega H264 nativo
+    en la resolucion y framerate configurados (sin recodificar)."""
+
+    def list_video_devices(self) -> list[str]:
+        return sorted(glob.glob(CAMERA_GLOB_PATTERN))
+
+    def _run_v4l2_ctl(self, args: list[str]) -> str | None:
+        try:
+            result = subprocess.run(
+                ["v4l2-ctl", *args],
+                capture_output=True,
+                text=True,
+                timeout=V4L2_CTL_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except (subprocess.TimeoutExpired, OSError) as error:
+            logger.debug("Fallo al ejecutar 'v4l2-ctl %s': %s", " ".join(args), error)
+            return None
+        return result.stdout
+
+    def _get_bus_info(self, device_path: str) -> str | None:
+        output = self._run_v4l2_ctl(["-d", device_path, "-D"])
+        if not output:
+            return None
+        match = re.search(r"Bus info\s*:\s*(\S+)", output)
+        return match.group(1) if match else None
+
+    def _supports_target_format(self, device_path: str) -> bool:
+        output = self._run_v4l2_ctl(["-d", device_path, "--list-formats-ext"])
+        if not output:
+            return False
+
+        current_format: str | None = None
+        current_size: tuple[int, int] | None = None
+
+        for line in output.splitlines():
+            format_match = re.match(r"\s*\[\d+\]:\s*'(\w+)'", line)
+            if format_match:
+                current_format = format_match.group(1)
+                continue
+
+            size_match = re.match(r"\s*Size:\s*Discrete\s*(\d+)x(\d+)", line)
+            if size_match:
+                current_size = (int(size_match.group(1)), int(size_match.group(2)))
+                continue
+
+            fps_match = re.search(r"\(([\d.]+)\s*fps\)", line)
+            if (
+                fps_match
+                and current_format == "H264"
+                and current_size == (STREAM_WIDTH, STREAM_HEIGHT)
+                and abs(float(fps_match.group(1)) - STREAM_FRAMERATE) < 0.5
+            ):
+                return True
+
+        return False
+
+    def find_h264_camera(self) -> str | None:
+        for device_path in self.list_video_devices():
+            bus_info = self._get_bus_info(device_path)
+            if not bus_info or "usb" not in bus_info.lower():
+                logger.debug(
+                    "%s descartado: no es un dispositivo USB (bus_info=%s)", device_path, bus_info
+                )
+                continue
+            if not self._supports_target_format(device_path):
+                logger.debug(
+                    "%s descartado: no soporta H264 %dx%d@%dfps",
+                    device_path, STREAM_WIDTH, STREAM_HEIGHT, STREAM_FRAMERATE,
+                )
+                continue
+            logger.debug("%s aceptado: USB + H264 %dx%d@%dfps", device_path, STREAM_WIDTH, STREAM_HEIGHT, STREAM_FRAMERATE)
+            return device_path
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Deteccion de interfaz Ethernet activa e IP (solo para el campo c= informativo del SDP)
+# ---------------------------------------------------------------------------
+
+
+class NetworkDetector:
+    """Detecta la interfaz Ethernet activa del equipo y su IP propia, usada solo
+    para el campo informativo c= del SDP de referencia (no para el destino real
+    del stream, que ahora es unicast explicito via argumentos de linea de comando)."""
+
+    @staticmethod
+    def list_ethernet_interfaces() -> list[str]:
+        interfaces: list[str] = []
+        net_class_path = "/sys/class/net"
+        if not os.path.isdir(net_class_path):
+            return interfaces
+
+        for iface in sorted(os.listdir(net_class_path)):
+            if iface.startswith(EXCLUDED_INTERFACE_PREFIXES):
+                continue
+            if os.path.isdir(os.path.join(net_class_path, iface, "wireless")):
+                continue
+
+            type_path = os.path.join(net_class_path, iface, "type")
+            operstate_path = os.path.join(net_class_path, iface, "operstate")
+            try:
+                with open(type_path, encoding="utf-8") as type_file:
+                    iface_type = type_file.read().strip()
+                with open(operstate_path, encoding="utf-8") as operstate_file:
+                    operstate = operstate_file.read().strip()
+            except OSError:
+                continue
+
+            if iface_type == "1" and operstate == "up":
+                interfaces.append(iface)
+
+        return interfaces
+
+    @staticmethod
+    def get_interface_ipv4(ifname: str) -> str | None:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            try:
+                packed_ifname = struct.pack("256s", ifname.encode("utf-8")[:15])
+                raw_address = fcntl.ioctl(sock.fileno(), SIOCGIFADDR, packed_ifname)
+                return socket.inet_ntoa(raw_address[20:24])
+            except OSError:
+                return None
+
+    def find_active_ethernet(self) -> tuple[str, str] | None:
+        """Busca la primera interfaz Ethernet activa con IPv4 asignada.
+
+        Returns:
+            Tupla (interfaz, ip_propia) o None si ninguna interfaz Ethernet
+            activa tiene una IPv4 asignada.
+        """
+        for iface in self.list_ethernet_interfaces():
+            ip_address = self.get_interface_ipv4(iface)
+            if ip_address:
+                return iface, ip_address
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Pipeline de GStreamer
+# ---------------------------------------------------------------------------
+
+
+class GstStreamPipeline:
+    """Construye y administra el pipeline de GStreamer que remuxea el H264
+    nativo de la camara a paquetes RTP/UDP unicast, usando bindings PyGObject
+    (sin invocar gst-launch-1.0 como subproceso)."""
+
+    def __init__(
+        self,
+        device_path: str,
+        own_ip: str,
+        client_ips: list[str],
+        on_playing: Callable[[], None] | None = None,
+    ) -> None:
+        """Inicializa el manejador de pipeline para un dispositivo y destinos dados.
+
+        Args:
+            device_path: Nodo V4L2 de la camara, por ejemplo "/dev/video0".
+            own_ip: IP propia del equipo, usada solo para el campo c= del SDP informativo.
+            client_ips: Lista de IPs unicast de los clientes a los que se envia el
+                stream (equivalente al "clients=ip:puerto,..." de multiudpsink que
+                usa mavlink-camera-manager/BlueOS).
+            on_playing: Callback invocado una vez cuando el pipeline confirma (via el bus)
+                que efectivamente alcanzo el estado PLAYING.
+        """
+        self.device_path = device_path
+        self.own_ip = own_ip
+        self.client_ips = client_ips
+        self._on_playing = on_playing
+        self.pipeline: Gst.Pipeline | None = None
+        self._mainloop: GLib.MainLoop | None = None
+        self._stop_reason: str | None = None
+        self._reached_playing = False
+        self._playing_deadline: float | None = None
+
+    def _make_element(self, factory_name: str, element_name: str) -> Gst.Element:
+        element = Gst.ElementFactory.make(factory_name, element_name)
+        if element is None:
+            raise RuntimeError(
+                f"No se pudo crear el elemento GStreamer '{factory_name}'. Verifique que los "
+                "plugins de GStreamer esten instalados (gstreamer1.0-plugins-base/good/bad)."
+            )
+        return element
+
+    def build(self) -> None:
+        """Construye el pipeline: v4l2src -> queue -> capsfilter(H264) -> h264parse ->
+        rtph264pay -> multiudpsink, sin recodificar el video en ningun punto.
+
+        Raises:
+            RuntimeError: Si algun elemento de GStreamer requerido no puede crearse.
+        """
+        self.pipeline = Gst.Pipeline.new("usb_h264_streamer_pipeline")
+
+        source = self._make_element("v4l2src", "camera_source")
+        source.set_property("device", self.device_path)
+        source.set_property("do-timestamp", True)
+
+        queue = self._make_element("queue", "capture_queue")
+
+        caps_filter = self._make_element("capsfilter", "camera_caps")
+        caps_string = (
+            f"video/x-h264,width={STREAM_WIDTH},height={STREAM_HEIGHT},"
+            f"framerate={STREAM_FRAMERATE}/1"
+        )
+        caps_filter.set_property("caps", Gst.Caps.from_string(caps_string))
+
+        parser = self._make_element("h264parse", "h264_parser")
+        parser.set_property("config-interval", -1)
+
+        payloader = self._make_element("rtph264pay", "rtp_payloader")
+        payloader.set_property("pt", RTP_PAYLOAD_TYPE)
+        payloader.set_property("config-interval", -1)
+        try:
+            payloader.set_property("aggregate-mode", "zero-latency")
+        except TypeError:
+            logger.debug("rtph264pay no soporta 'aggregate-mode' en esta version de GStreamer.")
+
+        # multiudpsink con "clients=ip:puerto,..." en vez de udpsink a la
+        # direccion de broadcast: igual que mavlink-camera-manager/BlueOS
+        # (src/lib/stream/sink/udp_sink.rs). No requiere SO_BROADCAST porque
+        # cada paquete va dirigido a una IP unicast especifica, lo que en un
+        # enlace HomePlug AV/PLC (LX200V20) si se beneficia del
+        # reintento/ACK a nivel de capa MAC (el broadcast no).
+        clients = ",".join(f"{ip}:{STREAM_UDP_PORT}" for ip in self.client_ips)
+        sink = self._make_element("multiudpsink", "udp_sink")
+        sink.set_property("clients", clients)
+        sink.set_property("sync", False)
+
+        for element in (source, queue, caps_filter, parser, payloader, sink):
+            self.pipeline.add(element)
+
+        source.link(queue)
+        queue.link(caps_filter)
+        caps_filter.link(parser)
+        parser.link(payloader)
+        payloader.link(sink)
+
+        rtp_src_pad = payloader.get_static_pad("src")
+        rtp_src_pad.add_probe(Gst.PadProbeType.EVENT_DOWNSTREAM, self._on_rtp_caps_probe)
+
+    def _on_rtp_caps_probe(self, pad: Gst.Pad, probe_info: Gst.PadProbeInfo) -> Gst.PadProbeReturn:
+        event = probe_info.get_event()
+        if event is None or event.type != Gst.EventType.CAPS:
+            return Gst.PadProbeReturn.OK
+
+        caps = event.parse_caps()
+        structure = caps.get_structure(0)
+        sprop_parameter_sets = structure.get_string("sprop-parameter-sets")
+        profile_level_id = structure.get_string("profile-level-id")
+
+        if sprop_parameter_sets and profile_level_id:
+            self._log_sdp_reference(sprop_parameter_sets, profile_level_id)
+            return Gst.PadProbeReturn.REMOVE
+
+        return Gst.PadProbeReturn.OK
+
+    def _log_sdp_reference(self, sprop_parameter_sets: str, profile_level_id: str) -> None:
+        session_id = uuid.uuid4()
+        sdp_text = (
+            "v=0\n"
+            f"s={session_id}\n"
+            "i=This is a UDP stream\n"
+            "t=0 0\n"
+            f"a=tool:{APP_NAME} - {APP_VERSION}\n"
+            "a=type:broadcast\n"
+            "a=recvonly\n"
+            f"m=video {STREAM_UDP_PORT} RTP/AVP {RTP_PAYLOAD_TYPE}\n"
+            f"c=IN IP4 {self.own_ip}\n"
+            f"a=rtpmap:{RTP_PAYLOAD_TYPE} H264/90000\n"
+            f"a=framerate:{STREAM_FRAMERATE}\n"
+            f"a=fmtp:{RTP_PAYLOAD_TYPE} packetization-mode=1;"
+            f"sprop-parameter-sets={sprop_parameter_sets};"
+            f"profile-level-id={profile_level_id};level-asymmetry-allowed=1\n"
+        )
+        logger.info("Descriptor SDP generado dinamicamente desde el stream real:\n%s", sdp_text)
+        try:
+            with open(SDP_OUTPUT_PATH, "w", encoding="utf-8") as sdp_file:
+                sdp_file.write(sdp_text)
+            logger.info("SDP de referencia escrito en %s", SDP_OUTPUT_PATH)
+        except OSError as error:
+            logger.warning("No se pudo escribir el archivo SDP de referencia: %s", error)
+
+    def _on_bus_message(self, bus: Gst.Bus, message: Gst.Message) -> bool:
+        message_type = message.type
+        if message_type == Gst.MessageType.ERROR:
+            error, debug_info = message.parse_error()
+            logger.error("Error de GStreamer: %s (%s)", error.message, debug_info)
+            self._stop_reason = "error"
+            if self._mainloop:
+                self._mainloop.quit()
+        elif message_type == Gst.MessageType.EOS:
+            logger.warning("Fin de stream (EOS) recibido desde el pipeline.")
+            self._stop_reason = "eos"
+            if self._mainloop:
+                self._mainloop.quit()
+        elif message_type == Gst.MessageType.WARNING:
+            warning, debug_info = message.parse_warning()
+            logger.warning("Advertencia de GStreamer: %s (%s)", warning.message, debug_info)
+        elif message_type == Gst.MessageType.STATE_CHANGED and message.src == self.pipeline:
+            _, new_state, _ = message.parse_state_changed()
+            if new_state == Gst.State.PLAYING:
+                self._reached_playing = True
+                if self._on_playing is not None:
+                    self._on_playing()
+                    self._on_playing = None
+        return True
+
+    def _check_device_present(self) -> bool:
+        if not os.path.exists(self.device_path):
+            logger.error("El dispositivo de camara %s ya no esta presente.", self.device_path)
+            self._stop_reason = "device_lost"
+            if self._mainloop:
+                self._mainloop.quit()
+            return True
+
+        if (
+            not self._reached_playing
+            and self._playing_deadline is not None
+            and time.monotonic() >= self._playing_deadline
+        ):
+            logger.error(
+                "El pipeline no confirmo PLAYING tras %d s (probable cuelgue de "
+                "negociacion de caps). Abortando para reintentar.",
+                PLAYING_TIMEOUT_SECONDS,
+            )
+            self._stop_reason = "playing_timeout"
+            if self._mainloop:
+                self._mainloop.quit()
+        return True
+
+    def run(self) -> str | None:
+        assert self.pipeline is not None, "build() debe llamarse antes de run()"
+
+        self._mainloop = GLib.MainLoop()
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus_handler_id = bus.connect("message", self._on_bus_message)
+        device_check_id = GLib.timeout_add_seconds(
+            DEVICE_POLL_INTERVAL_SECONDS, self._check_device_present
+        )
+
+        self._playing_deadline = time.monotonic() + PLAYING_TIMEOUT_SECONDS
+        state_change_return = self.pipeline.set_state(Gst.State.PLAYING)
+        if state_change_return == Gst.StateChangeReturn.FAILURE:
+            GLib.source_remove(device_check_id)
+            bus.disconnect(bus_handler_id)
+            bus.remove_signal_watch()
+            raise RuntimeError(
+                "GStreamer rechazo el cambio de estado a PLAYING (fallo sincronico); "
+                "revise las propiedades/caps del pipeline."
+            )
+        logger.info(
+            "Streaming solicitado: dispositivo=%s destino=%s (unicast, pt=%d)",
+            self.device_path,
+            ", ".join(f"udp://{ip}:{STREAM_UDP_PORT}" for ip in self.client_ips),
+            RTP_PAYLOAD_TYPE,
+        )
+
+        try:
+            self._mainloop.run()
+        finally:
+            GLib.source_remove(device_check_id)
+            bus.disconnect(bus_handler_id)
+            bus.remove_signal_watch()
+
+        return self._stop_reason
+
+    def quit(self) -> None:
+        self._stop_reason = "shutdown_requested"
+        if self._mainloop and self._mainloop.is_running():
+            self._mainloop.quit()
+
+    def stop(self) -> None:
+        if self.pipeline is not None:
+            self.pipeline.set_state(Gst.State.NULL)
+            self.pipeline = None
+
+
+# ---------------------------------------------------------------------------
+# Aplicacion principal
+# ---------------------------------------------------------------------------
+
+
+class StreamerApplication:
+    """Orquesta el ciclo completo: deteccion de camara, deteccion de red,
+    construccion/ejecucion del pipeline y reconexion automatica ante fallas."""
+
+    def __init__(self, client_ips: list[str]) -> None:
+        self.client_ips = client_ips
+        self._shutdown_requested = False
+        self._current_pipeline: GstStreamPipeline | None = None
+        signal.signal(signal.SIGINT, self._handle_shutdown_signal)
+        signal.signal(signal.SIGTERM, self._handle_shutdown_signal)
+
+    def _handle_shutdown_signal(self, signum: int, frame: FrameType | None) -> None:
+        logger.info("Senal de interrupcion recibida (signum=%d), cerrando de forma limpia...", signum)
+        self._shutdown_requested = True
+        if self._current_pipeline is not None:
+            self._current_pipeline.quit()
+
+    def _wait_for_camera(self) -> str | None:
+        camera_detector = CameraDetector()
+        while not self._shutdown_requested:
+            device_path = camera_detector.find_h264_camera()
+            if device_path:
+                return device_path
+            logger.warning(
+                "No se detecto ninguna camara USB compatible con H264 %dx%d@%dfps. "
+                "Reintentando en %d s...",
+                STREAM_WIDTH, STREAM_HEIGHT, STREAM_FRAMERATE, RECONNECT_DELAY_SECONDS,
+            )
+            time.sleep(RECONNECT_DELAY_SECONDS)
+        return None
+
+    def _wait_for_network(self) -> tuple[str, str] | None:
+        network_detector = NetworkDetector()
+        while not self._shutdown_requested:
+            network_info = network_detector.find_active_ethernet()
+            if network_info:
+                return network_info
+            logger.warning(
+                "No se detecto ninguna interfaz Ethernet activa con IPv4 asignada. "
+                "Reintentando en %d s...", RECONNECT_DELAY_SECONDS,
+            )
+            time.sleep(RECONNECT_DELAY_SECONDS)
+        return None
+
+    def run(self) -> None:
+        logger.info("Iniciando %s %s (clientes unicast: %s)", APP_NAME, APP_VERSION, ", ".join(self.client_ips))
+
+        while not self._shutdown_requested:
+            device_path = self._wait_for_camera()
+            if device_path is None:
+                break
+            logger.info("Camara detectada: %s", device_path)
+
+            network_info = self._wait_for_network()
+            if network_info is None:
+                break
+            iface, own_ip = network_info
+            logger.info("Interfaz Ethernet activa: %s (ip=%s)", iface, own_ip)
+
+            def _on_playing(client_ips: list[str] = self.client_ips) -> None:
+                print_video_target(client_ips, STREAM_UDP_PORT)
+                print_status(STATUS_RUNNING)
+
+            gst_pipeline = GstStreamPipeline(
+                device_path, own_ip, self.client_ips, on_playing=_on_playing
+            )
+            self._current_pipeline = gst_pipeline
+            stop_reason: str | None
+            try:
+                gst_pipeline.build()
+                stop_reason = gst_pipeline.run()
+            except Exception as error:  # noqa: BLE001 - se registra y se reintenta, no se propaga
+                logger.error("Fallo al construir/ejecutar el pipeline: %s", error)
+                stop_reason = "exception"
+            finally:
+                gst_pipeline.stop()
+                self._current_pipeline = None
+
+            if self._shutdown_requested:
+                break
+
+            logger.warning(
+                "Streaming detenido (motivo=%s). Reintentando en %d s...",
+                stop_reason, RECONNECT_DELAY_SECONDS,
+            )
+            time.sleep(RECONNECT_DELAY_SECONDS)
+
+        logger.info("%s finalizado.", APP_NAME)
+        print_status(STATUS_CANCELLED)
+
+
+def check_required_system_tools() -> None:
+    if shutil.which("v4l2-ctl") is None:
+        logger.error(
+            "No se encontro el binario 'v4l2-ctl'. Instalelo con: sudo apt install v4l-utils"
+        )
+        sys.stderr.write(
+            "Error fatal: no se encontro el binario 'v4l2-ctl'. Instalelo con: "
+            "sudo apt install v4l-utils\n"
+        )
+        sys.exit(1)
+
+
+def main() -> None:
+    """Punto de entrada: configura logging, valida dependencias, inicializa GStreamer y arranca la app."""
+    if len(sys.argv) < 2:
+        sys.stderr.write(
+            "Uso: cam_usb_h264_streamer_unicast.py <ip_cliente_1> [ip_cliente_2 ...]\n"
+            "Ejemplo: cam_usb_h264_streamer_unicast.py 192.168.1.200\n"
+        )
+        sys.exit(1)
+    client_ips = sys.argv[1:]
+
+    configure_logging()
+    check_required_system_tools()
+    Gst.init(None)
+    app = StreamerApplication(client_ips)
+    app.run()
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+
+
+
+
+<br>
+
+# cam_usb_h264_streamer_broadcast.py
+
+```Pyhton
+
+#!/usr/bin/env python3
+"""
+Streaming en tiempo real de una camara USB con H264 nativo hacia la red via RTP/UDP,
+compatible con QGroundControl y VLC (mismo estandar que BlueOS / mavlink-camera-manager).
+
+@author: Carlos Briceno <carjavi@hotmail.com>
+@date: 21-07-2026
+@copyright: Copyright (c) 2026 www.carjavi.com
+@version: V1.0
+@library:
+- Instalacion con un unico script (ver install.sh): instala los paquetes de
+  sistema (GStreamer, v4l-utils, headers) y PyGObject dentro del venv,
+  compilado especificamente para su interprete.
+    ./install.sh
+
+Decisiones tecnicas relevantes:
+- No se usa asyncio: GLib.MainLoop ya es el bucle de eventos nativo de GStreamer y
+  cubre por completo las necesidades de este script (un unico flujo secuencial de
+  captura -> pipeline -> reintento). Combinarlo con asyncio anadiria complejidad sin
+  beneficio real.
+- Logging con formato timestamp/nivel/modulo en texto plano (no JSON): este script se
+  ejecuta manualmente en una terminal y debe ser legible en tiempo real por el
+  operador; no hay un agregador de logs en este modo de despliegue.
+- Destino UDP = direccion de broadcast del subnet de la interfaz Ethernet activa
+  (IP | ~netmask), NO la IP unicast propia. Enviar paquetes a la propia IP unicast
+  los entregaria por loopback y jamas saldrian al cable, incumpliendo el requisito de
+  que "cualquier cliente en la misma red" (VLC/QGC en otro equipo) reciba el stream sin
+  configuracion adicional. La IP propia se sigue usando en el campo c= del SDP
+  informativo, tal como en el descriptor de referencia.
+- La deteccion de camara usa el binario v4l2-ctl (paquete v4l-utils) via subprocess,
+  NO gst-launch-1.0: el requisito de evitar subprocess aplica al pipeline de streaming
+  (para tener control programatico de errores/reconexion via el bus de GStreamer), no a
+  la fase de enumeracion/verificacion de formatos soportados por el hardware, donde
+  v4l2-ctl es la herramienta estandar y ya es una dependencia de sistema documentada.
+"""
+
+from __future__ import annotations
+
+import glob
+import ipaddress
+import logging
+import os
+import re
+import shutil
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import time
+import uuid
+from types import FrameType
+from typing import Callable
+
+try:
+    import fcntl
+except ImportError as import_error:
+    sys.stderr.write(
+        "Error: este script solo puede ejecutarse en Linux (requiere el modulo 'fcntl').\n"
+        f"Detalle: {import_error}\n"
+    )
+    sys.exit(1)
+
+try:
+    import gi
+
+    gi.require_version("Gst", "1.0")
+    gi.require_version("Gio", "2.0")
+    from gi.repository import Gst, GLib, Gio
+except (ImportError, ValueError) as import_error:
+    sys.stderr.write(
+        "Error: no se encontraron los bindings de GStreamer (PyGObject/Gst).\n"
+        "Instale las dependencias con:\n"
+        "  ./install.sh\n"
+        f"Detalle: {import_error}\n"
+    )
+    sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Constantes de configuracion
+# ---------------------------------------------------------------------------
+
+APP_NAME = "usb_h264_streamer"
+"""Nombre de la aplicacion, usado en logs y en el atributo a=tool del SDP informativo."""
+
+APP_VERSION = "V1.0"
+"""Version de la aplicacion, usada en logs y en el atributo a=tool del SDP informativo."""
+
+STREAM_WIDTH = 1280
+"""Ancho de video requerido en la camara USB (pixeles)."""
+
+STREAM_HEIGHT = 720
+"""Alto de video requerido en la camara USB (pixeles)."""
+
+STREAM_FRAMERATE = 30
+"""Framerate requerido en la camara USB (fps)."""
+
+STREAM_UDP_PORT = 5600
+"""Puerto UDP de destino, fijo por compatibilidad con QGroundControl/BlueOS."""
+
+RTP_PAYLOAD_TYPE = 96
+"""Payload type RTP dinamico usado para H264, segun RFC 3551 (96-127)."""
+
+RECONNECT_DELAY_SECONDS = 4
+"""Tiempo de espera entre reintentos de deteccion/streaming tras una falla."""
+
+DEVICE_POLL_INTERVAL_SECONDS = 1
+"""Intervalo de verificacion de presencia fisica del dispositivo /dev/videoX durante el streaming."""
+
+PLAYING_TIMEOUT_SECONDS = 8
+"""Tiempo maximo de espera a que el pipeline confirme PLAYING antes de abortar y reintentar.
+
+Cubre el caso de una negociacion de caps que se cuelga indefinidamente sin emitir
+ningun mensaje de ERROR en el bus (p. ej. un stream-format que la camara no soporta):
+sin este watchdog, el mainloop se queda esperando para siempre sin dar ninguna senal."""
+
+V4L2_CTL_TIMEOUT_SECONDS = 5
+"""Timeout maximo para cada invocacion del binario v4l2-ctl."""
+
+CAMERA_GLOB_PATTERN = "/dev/video*"
+"""Patron glob usado para enumerar los nodos de dispositivo de video V4L2."""
+
+SDP_OUTPUT_PATH = "stream_reference.sdp"
+"""Ruta donde se escribe el descriptor SDP informativo, generado dinamicamente desde el stream real."""
+
+SIOCGIFADDR = 0x8915
+"""Codigo ioctl de Linux para obtener la direccion IPv4 de una interfaz de red."""
+
+SIOCGIFNETMASK = 0x891B
+"""Codigo ioctl de Linux para obtener la mascara de subred IPv4 de una interfaz de red."""
+
+EXCLUDED_INTERFACE_PREFIXES = ("lo", "docker", "veth", "br-", "virbr", "tun", "tap")
+"""Prefijos de interfaces virtuales/loopback a excluir al buscar la interfaz Ethernet activa."""
+
+LOG_FILE_PATH = "usb_h264_streamer.log"
+"""Archivo donde se registra el detalle tecnico (misma logica que BlueOS/mavlink-camera-manager,
+que dejan el detalle en el log del servicio y muestran solo el estado al operador)."""
+
+STATUS_RUNNING = "running!"
+"""Texto de estado mostrado en consola mientras el streaming esta activo."""
+
+STATUS_CANCELLED = "cancelado"
+"""Texto de estado mostrado en consola al cerrar la aplicacion (Ctrl+C/SIGTERM)."""
 
 logger = logging.getLogger(APP_NAME)
 
@@ -1356,10 +2045,10 @@ logger = logging.getLogger(APP_NAME)
 def configure_logging() -> None:
     """Configura el logging raiz con salida a archivo en formato timestamp/nivel/modulo.
 
-    El detalle tecnico no se muestra en consola: el operador solo ve las lineas de
-    estado impresas por print_status() (esperas de camara/red, "running!",
-    "cancelado"), igual que en BlueOS/mavlink-camera-manager. El detalle completo
-    queda en LOG_FILE_PATH para diagnostico posterior.
+    El detalle tecnico no se muestra en consola: el operador solo ve la linea de
+    estado ("status: running!"/"status: cancelado") impresa por print_status(),
+    igual que en BlueOS/mavlink-camera-manager. El detalle completo queda en
+    LOG_FILE_PATH para diagnostico posterior.
     """
     logging.basicConfig(
         level=logging.INFO,
@@ -1489,60 +2178,21 @@ class CameraDetector:
 
 
 # ---------------------------------------------------------------------------
-# Deteccion de interfaz de red activa e IP
+# Deteccion de interfaz Ethernet activa e IP
 # ---------------------------------------------------------------------------
 
 
 class NetworkDetector:
-    """Detecta la interfaz de red activa del equipo (Ethernet cableada, con
-    respaldo a WiFi) y calcula su IP y su direccion de broadcast, sin requerir
-    configuracion manual.
-
-    Respaldo a WiFi (cambio para Raspberry Pi 4): a diferencia de la PC Ubuntu de
-    referencia -que siempre cuenta con Ethernet cableada-, muchos despliegues de
-    Raspberry Pi solo tienen conectividad WiFi. El mecanismo de envio (broadcast
-    UDP calculado como ip | ~netmask) es identico sobre WiFi, por lo que se
-    intenta primero Ethernet cableada y, si no hay ninguna activa, se recurre a
-    WiFi en su lugar (ver find_active_network()).
-    """
+    """Detecta la interfaz Ethernet activa del equipo y calcula su IP y su
+    direccion de broadcast, sin requerir configuracion manual."""
 
     @staticmethod
-    def _read_sys_class_net_attr(iface: str, attr: str) -> str | None:
-        """Lee un atributo de /sys/class/net/<iface>/<attr>.
-
-        Args:
-            iface: Nombre de la interfaz (por ejemplo "eth0" o "wlan0").
-            attr: Nombre del atributo a leer (por ejemplo "type" u "operstate").
+    def list_ethernet_interfaces() -> list[str]:
+        """Enumera interfaces Ethernet fisicas activas (excluye loopback, WiFi y virtuales).
 
         Returns:
-            El contenido del atributo (sin espacios en blanco), o None si la
-            interfaz o el atributo no existen o no son legibles.
-        """
-        attr_path = os.path.join("/sys/class/net", iface, attr)
-        try:
-            with open(attr_path, encoding="utf-8") as attr_file:
-                return attr_file.read().strip()
-        except OSError:
-            return None
-
-    @classmethod
-    def _list_candidate_interfaces(cls, wireless: bool) -> list[str]:
-        """Enumera interfaces de red activas (ARPHRD_ETHER) de un medio dado.
-
-        Registra en el log de depuracion el motivo de descarte de cada interfaz
-        evaluada, para poder diagnosticar sin adivinar por que una interfaz
-        especifica no fue considerada activa (necesario en Raspberry Pi, donde
-        'operstate' se comporta distinto de la PC de referencia; ver
-        ACCEPTED_OPERSTATES).
-
-        Args:
-            wireless: True para enumerar solo interfaces WiFi, False para
-                enumerar solo interfaces cableadas (excluyendo virtuales via
-                EXCLUDED_INTERFACE_PREFIXES).
-
-        Returns:
-            Lista ordenada de nombres de interfaz que son ARPHRD_ETHER y cuyo
-            'operstate' esta en ACCEPTED_OPERSTATES.
+            Lista de nombres de interfaz (por ejemplo ["eth0"]) que son de tipo
+            Ethernet (ARPHRD_ETHER), no inalambricas y estan en estado "up".
         """
         interfaces: list[str] = []
         net_class_path = "/sys/class/net"
@@ -1550,54 +2200,25 @@ class NetworkDetector:
             return interfaces
 
         for iface in sorted(os.listdir(net_class_path)):
-            is_wireless = os.path.isdir(os.path.join(net_class_path, iface, "wireless"))
-            if wireless:
-                if not is_wireless:
-                    continue
-            else:
-                if is_wireless or iface.startswith(EXCLUDED_INTERFACE_PREFIXES):
-                    continue
-
-            iface_type = cls._read_sys_class_net_attr(iface, "type")
-            operstate = cls._read_sys_class_net_attr(iface, "operstate")
-            if iface_type is None or operstate is None:
-                logger.debug("%s descartada: no se pudo leer type/operstate", iface)
+            if iface.startswith(EXCLUDED_INTERFACE_PREFIXES):
+                continue
+            if os.path.isdir(os.path.join(net_class_path, iface, "wireless")):
                 continue
 
-            if iface_type != "1":
-                logger.debug("%s descartada: type=%s (no es ARPHRD_ETHER)", iface, iface_type)
+            type_path = os.path.join(net_class_path, iface, "type")
+            operstate_path = os.path.join(net_class_path, iface, "operstate")
+            try:
+                with open(type_path, encoding="utf-8") as type_file:
+                    iface_type = type_file.read().strip()
+                with open(operstate_path, encoding="utf-8") as operstate_file:
+                    operstate = operstate_file.read().strip()
+            except OSError:
                 continue
 
-            if operstate not in ACCEPTED_OPERSTATES:
-                logger.debug(
-                    "%s descartada: operstate=%s (aceptados: %s)",
-                    iface, operstate, ACCEPTED_OPERSTATES,
-                )
-                continue
-
-            interfaces.append(iface)
+            if iface_type == "1" and operstate == "up":
+                interfaces.append(iface)
 
         return interfaces
-
-    @classmethod
-    def list_ethernet_interfaces(cls) -> list[str]:
-        """Enumera interfaces Ethernet cableadas activas (excluye loopback, WiFi y virtuales).
-
-        Returns:
-            Lista de nombres de interfaz (por ejemplo ["eth0"]) que son de tipo
-            Ethernet (ARPHRD_ETHER), no inalambricas y con operstate aceptado.
-        """
-        return cls._list_candidate_interfaces(wireless=False)
-
-    @classmethod
-    def list_wifi_interfaces(cls) -> list[str]:
-        """Enumera interfaces WiFi activas, usadas como respaldo si no hay Ethernet cableada.
-
-        Returns:
-            Lista de nombres de interfaz (por ejemplo ["wlan0"]) que son
-            inalambricas y con operstate aceptado.
-        """
-        return cls._list_candidate_interfaces(wireless=True)
 
     @staticmethod
     def get_interface_ipv4(ifname: str) -> str | None:
@@ -1649,32 +2270,19 @@ class NetworkDetector:
         network = ipaddress.IPv4Network(f"{ip_address}/{netmask}", strict=False)
         return str(network.broadcast_address)
 
-    def find_active_network(self) -> tuple[str, str, str] | None:
-        """Busca la primera interfaz de red activa con IPv4 asignada.
-
-        Prioriza interfaces Ethernet cableadas; si ninguna esta disponible,
-        recurre a interfaces WiFi (respaldo necesario en Raspberry Pi, donde no
-        siempre hay un cable Ethernet conectado; ver docstring de la clase).
+    def find_active_ethernet(self) -> tuple[str, str, str] | None:
+        """Busca la primera interfaz Ethernet activa con IPv4 asignada.
 
         Returns:
             Tupla (interfaz, ip_propia, ip_broadcast) o None si ninguna interfaz
-            activa (cableada o WiFi) tiene una IPv4 asignada.
+            Ethernet activa tiene una IPv4 asignada.
         """
-        for interfaces, media in (
-            (self.list_ethernet_interfaces(), "Ethernet"),
-            (self.list_wifi_interfaces(), "WiFi"),
-        ):
-            for iface in interfaces:
-                ip_address = self.get_interface_ipv4(iface)
-                netmask = self.get_interface_netmask(iface)
-                if ip_address and netmask:
-                    broadcast_address = self.compute_broadcast_address(ip_address, netmask)
-                    logger.info("Interfaz de red activa detectada: %s (%s)", iface, media)
-                    return iface, ip_address, broadcast_address
-                logger.debug(
-                    "%s (%s) tiene operstate aceptado pero aun no tiene IPv4/netmask asignados",
-                    iface, media,
-                )
+        for iface in self.list_ethernet_interfaces():
+            ip_address = self.get_interface_ipv4(iface)
+            netmask = self.get_interface_netmask(iface)
+            if ip_address and netmask:
+                broadcast_address = self.compute_broadcast_address(ip_address, netmask)
+                return iface, ip_address, broadcast_address
         return None
 
 
@@ -2009,49 +2617,31 @@ class StreamerApplication:
             self._current_pipeline.quit()
 
     def _wait_for_camera(self) -> str | None:
-        """Reintenta la deteccion de camara USB compatible hasta encontrarla o hasta el cierre solicitado.
-
-        Imprime periodicamente un estado de espera en consola (cada
-        CONSOLE_STATUS_THROTTLE reintentos) para que una espera prolongada -mas
-        comun en Raspberry Pi que en la PC de referencia- no se perciba como una
-        aplicacion colgada.
-        """
+        """Reintenta la deteccion de camara USB compatible hasta encontrarla o hasta el cierre solicitado."""
         camera_detector = CameraDetector()
-        attempt = 0
         while not self._shutdown_requested:
             device_path = camera_detector.find_h264_camera()
             if device_path:
                 return device_path
-            if attempt % CONSOLE_STATUS_THROTTLE == 0:
-                print_status(STATUS_WAITING_CAMERA)
             logger.warning(
                 "No se detecto ninguna camara USB compatible con H264 %dx%d@%dfps. "
                 "Reintentando en %d s...",
                 STREAM_WIDTH, STREAM_HEIGHT, STREAM_FRAMERATE, RECONNECT_DELAY_SECONDS,
             )
-            attempt += 1
             time.sleep(RECONNECT_DELAY_SECONDS)
         return None
 
     def _wait_for_network(self) -> tuple[str, str, str] | None:
-        """Reintenta la deteccion de interfaz de red activa hasta encontrarla o hasta el cierre solicitado.
-
-        Imprime periodicamente un estado de espera en consola (cada
-        CONSOLE_STATUS_THROTTLE reintentos); ver docstring de _wait_for_camera.
-        """
+        """Reintenta la deteccion de interfaz Ethernet activa hasta encontrarla o hasta el cierre solicitado."""
         network_detector = NetworkDetector()
-        attempt = 0
         while not self._shutdown_requested:
-            network_info = network_detector.find_active_network()
+            network_info = network_detector.find_active_ethernet()
             if network_info:
                 return network_info
-            if attempt % CONSOLE_STATUS_THROTTLE == 0:
-                print_status(STATUS_WAITING_NETWORK)
             logger.warning(
-                "No se detecto ninguna interfaz de red activa (Ethernet o WiFi) con IPv4 "
-                "asignada. Reintentando en %d s...", RECONNECT_DELAY_SECONDS,
+                "No se detecto ninguna interfaz Ethernet activa con IPv4 asignada. "
+                "Reintentando en %d s...", RECONNECT_DELAY_SECONDS,
             )
-            attempt += 1
             time.sleep(RECONNECT_DELAY_SECONDS)
         return None
 
@@ -2070,7 +2660,7 @@ class StreamerApplication:
                 break
             iface, own_ip, broadcast_ip = network_info
             logger.info(
-                "Interfaz de red activa: %s (ip=%s, broadcast=%s)", iface, own_ip, broadcast_ip
+                "Interfaz Ethernet activa: %s (ip=%s, broadcast=%s)", iface, own_ip, broadcast_ip
             )
 
             def _on_playing(iface: str = iface, own_ip: str = own_ip) -> None:
@@ -2134,9 +2724,13 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
+
 ```
 
-<br>
+
+
+
+
 
 
 ## Referencias
