@@ -100,7 +100,7 @@ sudo usermod -aG video "$USER"
 
 > :bulb: **Tip:** Es la mejor opcion para usar ```fathom-x tether interface (Modulo L200V20)```
 
-```Broadcast```: Envía datos desde un emisor hacia todos los dispositivos de la red local.Utiliza una dirección MAC especial compuesta solo por letras F (FF:FF:FF:FF:FF:FF). Se usa para tareas de descubrimiento inicial, como el protocolo ARP. 
+```Broadcast```: Envía datos desde un emisor hacia todos los dispositivos de la red local. Utiliza una dirección MAC especial compuesta solo por letras F (FF:FF:FF:FF:FF:FF). Se usa para tareas de descubrimiento inicial, como el protocolo ARP. 
 
 > :warning: **Warning:** En Broadcast si se usa el ```fathom-x tether interface (Modulo L200V20)``` NO funciona el video, hay perdida de paquetes, y VLC requiere una cantidad minima para poder mostrar un video. 
 
@@ -151,6 +151,10 @@ a=rtpmap:96 H264/90000
 a=framerate:30
 a=fmtp:96 packetization-mode=1;sprop-parameter-sets=Z01AH5ZUAoAtyA==,aO44gA==;profile-level-id=4d401f;level-asymmetry-allowed=1
 ```
+- El campo c=IN IP4 <ip> del SDP es solo informativo para el receptor (VLC/QGC) — le dice "escucha aquí". No controla cómo transmite el emisor. Si le pones una dirección multicast real (224.x.x.x–239.x.x.x), algunos reproductores sí intentan unirse a ese grupo multicast automáticamente — pero eso es multicast, no lo mismo que unicast/broadcast.
+- El atributo a=type:broadcast que generan tanto tu script como el propio BlueOS (lo vi en el código fuente de mavlink-camera-manager) es solo un campo descriptivo de SDP (RFC 4566, tipo de sesión) — tampoco cambia el modo de entrega real. Es vestigial, no funcional.
+- Lo que realmente decide unicast vs. broadcast es el lado del emisor (multiudpsink clients=ip:puerto vs. enviar a 192.168.1.255) — que es justo lo que ya corregimos en cam_usb_h264_streamer_unicast.py. El SDP del receptor no tiene ningún control sobre eso.
+
 
 ### Opcion 3
 ### Corre el VLC desde terminal (ya configurado la red y el puerto)
