@@ -148,7 +148,10 @@ Es lo mismo que la version anterior solo que funciona para camaras MJPEG/YUY2
 ## Install
 
 ```bash
-pip install -r requirements.txt
+chmod +x install.sh
+./install.sh                        # instala GStreamer + PyGObject
+
+pip install -r requirements.txt     # instala psutil
 ```
 
 ### requirements.txt code
