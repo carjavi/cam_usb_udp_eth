@@ -42,7 +42,7 @@
 - [cam\_usb\_h264\_streamer\_unicast\_RPi\_ubunt.py](#cam_usb_h264_streamer_unicast_rpi_ubuntpy)
 - [cam\_usb\_h264\_streamer\_broadcast.py](#cam_usb_h264_streamer_broadcastpy)
 - [cam\_usb\_MJPEG-YUY2\_streamer\_unicast.py](#cam_usb_mjpeg-yuy2_streamer_unicastpy)
-  - [Referencias](#referencias)
+- [Referencias](#referencias)
 
 <br>
 
@@ -2819,7 +2819,7 @@ if __name__ == "__main__":
 
 
 
-## Referencias
+# Referencias
 
 - https://github.com/bluerobotics/mavlink-camera-manager
 - https://gstreamer.freedesktop.org/documentation/
