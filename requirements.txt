@@ -1,0 +1,26 @@
+# Dependencias de cam_usb_MJPEG-YUY2_streamer_unicast.py instalables via pip
+# (multiplataforma: Linux/RPi y Windows).
+#
+#   pip install -r requirements.txt
+
+psutil>=5.9
+
+# ---------------------------------------------------------------------------
+# GStreamer 1.0 + bindings PyGObject (gi) NO se instalan via pip: requieren
+# GStreamer y gobject-introspection instalados a nivel de sistema operativo
+# (compilar PyGObject desde pip sin esas librerias de sistema falla). Instalar
+# por separado segun la plataforma:
+#
+# Ubuntu / Raspberry Pi OS (paquetes verificados en Raspberry Pi OS/Debian 13):
+#   sudo apt install python3-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-tools \
+#       gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+#       gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly
+#
+# Windows:
+#   1. Instalar GStreamer (runtime + development, build "MSVC 64-bit") desde
+#      https://gstreamer.freedesktop.org/download/, marcando TODOS los
+#      conjuntos de plugins (base/good/bad/ugly) durante la instalacion.
+#   2. Instalar los bindings PyGObject para Windows (paquete MSYS2
+#      mingw-w64-x86_64-python-gobject, o wheels equivalentes) - "pip install
+#      PyGObject" por si solo no funciona en Windows sin este paso previo.
+# ---------------------------------------------------------------------------
